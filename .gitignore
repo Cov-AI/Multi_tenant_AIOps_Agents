@@ -1,0 +1,116 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# uv
+.uv/
+
+# Poetry (legacy)
+poetry.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# CodeBuddy
+.codebuddy/
+
+# Environment Variables (IMPORTANT: Never commit real credentials)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+.env.test
+
+# Logs
+logs/
+*.log
+*.pid
+
+# Database
+*.db
+*.sqlite
+
+# Milvus
+volumes/
+
+# Uploads
+uploads/
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# Kiro (AI IDE)
+.kiro/settings/
+.kiro/cache/
+.kiro/.state/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# Test data and mocks
+test_data/
+mock_data/
+*.test.json
+
+# Secrets and credentials (double check)
+secrets/
+credentials/
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+
+# Local development
+docker-compose.override.yml
+.local/
+

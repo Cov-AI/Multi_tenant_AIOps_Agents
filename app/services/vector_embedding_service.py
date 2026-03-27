@@ -1,129 +1,45 @@
-"""向量嵌入服务模块 - 基于 LangChain Embeddings 标准接口"""
+"""向量嵌入服务模块 - 基于 LLM Factory
 
-from typing import List
+对应 tasks.md: Task 2.5 — 实现 LLM Factory 抽象层
+原 DashScopeEmbeddings 已重构为通过 unified get_embeddings() 获取，
+支持 OpenRouter / OpenAI 等。
+"""
 
-from langchain_core.embeddings import Embeddings
-from openai import OpenAI
 from loguru import logger
+from app.core.llm_factory import get_embeddings
+from langchain_core.embeddings import Embeddings
 
-from app.config import config
+# 为了向下兼容旧代码，我们在此提供一个全局单例/代理
 
-
-class DashScopeEmbeddings(Embeddings):
-    """阿里云 DashScope Text Embedding (OpenAI 兼容模式)
+class LazyEmbeddingProxy(Embeddings):
+    """延迟初始化的 Embedding 代理。
     
-    实现 LangChain 标准 Embeddings 接口:
-    - embed_documents(texts: List[str]) → List[List[float]]: 批量嵌入文档
-    - embed_query(text: str) → List[float]: 嵌入单个查询
+    避免在应用启动时如果没有配置 API Key 直接报错。
+    只有在第一次真的调用时才从 factory 获取并调用。
     """
+    def __init__(self):
+        self._instance = None
+        
+    @property
+    def instance(self) -> Embeddings:
+        if self._instance is None:
+            try:
+                self._instance = get_embeddings()
+                logger.info("全局 Embedding 服务已按需初始化")
+            except ValueError as e:
+                # 为了防止服务在无 config 时启动崩溃，抛出警告，等真正使用时再报错
+                logger.warning(f"Embedding 服务未配置: {e}")
+                # 为了向下兼容和让应用先启动，返回一个空的 Dummy 或抛错
+                # 但是为了满足 Langchain interface 和避免启动报错，这里必须能抛异常或者返回空
+                raise RuntimeError("Embedding API Key 未配置") from e
+        return self._instance
 
-    def __init__(
-        self,
-        api_key: str,
-        model: str = "text-embedding-v4",
-        dimensions: int = 1024,
-    ):
-        """
-        初始化 DashScope Embeddings
-        
-        Args:
-            api_key: DashScope API Key
-            model: 嵌入模型名称
-            dimensions: 向量维度
-        """
-        if not api_key or api_key == "your-api-key-here":
-            raise ValueError("请设置环境变量 DASHSCOPE_API_KEY")
-        
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
-        )
-        self.model = model
-        self.dimensions = dimensions
-        
-        # 打印初始化信息
-        masked_key = self._mask_api_key(api_key)
-        logger.info(
-            f"DashScope Embeddings 初始化完成 - "
-            f"模型: {model}, 维度: {dimensions}, API Key: {masked_key}"
-        )
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        # 如果当前在健康检查或尚未配置，则不调用真实 API
+        return self.instance.embed_documents(texts)
 
-    @staticmethod
-    def _mask_api_key(api_key: str) -> str:
-        """掩码 API Key 用于日志"""
-        if len(api_key) > 8:
-            return f"{api_key[:8]}...{api_key[-4:]}"
-        return "***"
-
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """
-        批量嵌入文档列表 (LangChain 标准接口)
-        
-        Args:
-            texts: 文本列表
-            
-        Returns:
-            List[List[float]]: 嵌入向量列表
-        """
-        if not texts:
-            return []
-        
-        try:
-            logger.info(f"批量嵌入 {len(texts)} 个文档")
-            
-            # 批量调用 API
-            response = self.client.embeddings.create(
-                model=self.model,
-                input=texts,
-                dimensions=self.dimensions,
-                encoding_format="float"
-            )
-            
-            embeddings = [item.embedding for item in response.data]
-            logger.debug(f"批量嵌入完成, 维度: {len(embeddings[0])}")
-            
-            return embeddings
-            
-        except Exception as e:
-            logger.error(f"批量嵌入失败: {e}")
-            raise RuntimeError(f"批量嵌入失败: {e}") from e
-
-    def embed_query(self, text: str) -> List[float]:
-        """
-        嵌入单个查询文本 (LangChain 标准接口)
-        
-        Args:
-            text: 查询文本
-            
-        Returns:
-            List[float]: 嵌入向量
-        """
-        if not text or not text.strip():
-            raise ValueError("查询文本不能为空")
-        
-        try:
-            logger.debug(f"嵌入查询, 长度: {len(text)} 字符")
-            
-            response = self.client.embeddings.create(
-                model=self.model,
-                input=text,
-                dimensions=self.dimensions,
-                encoding_format="float"
-            )
-            
-            embedding = response.data[0].embedding
-            logger.debug(f"查询嵌入完成, 维度: {len(embedding)}")
-            
-            return embedding
-            
-        except Exception as e:
-            logger.error(f"查询嵌入失败: {e}")
-            raise RuntimeError(f"查询嵌入失败: {e}") from e
-
+    def embed_query(self, text: str) -> list[float]:
+        return self.instance.embed_query(text)
 
 # 全局单例
-vector_embedding_service = DashScopeEmbeddings(
-    api_key=config.dashscope_api_key,
-    model=config.dashscope_embedding_model,
-    dimensions=1024
-)
+vector_embedding_service = LazyEmbeddingProxy()

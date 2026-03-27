@@ -20,7 +20,7 @@
 
 ### P0 阶段：核心多租户能力 + 可量化指标
 
-- [ ] 1. 建立数据模型和多租户隔离基础 ✅
+- [x] 1. 建立数据模型和多租户隔离基础 ✅
   - [x] 1.1 创建 PostgreSQL 数据模型和 RLS 策略
     - 使用 SQLAlchemy 定义所有核心表（tenants、users、agents、sessions、incidents、approvals、token_usage、audit_logs、checkpoints）
     - 为每张表启用 Row-Level Security（RLS）策略
@@ -46,7 +46,7 @@
     - 测试 RLS 策略生效
     - 测试边缘情况（空值、超长字符串）
 
-- [ ] 2. 实现 JWT 认证和租户上下文注入 ✅
+- [x] 2. 实现 JWT 认证和租户上下文注入 ✅
   - [x] 2.1 实现 JWT 编解码和中间件
     - 使用 PyJWT 实现 JWT 编码和解码
     - 创建 FastAPI 中间件解析 JWT 并注入 tenant_id 到请求上下文
@@ -74,7 +74,7 @@
   - ❌ **依赖原因**：Task 4（RAGAS）、Task 5（Compaction）、Task 8（六状态 Agent）都需要 LLM，不先做这个后续全部要返工
 
 
-- [ ] 3. 实现 Milvus 多租户隔离 ✅
+- [x] 3. 实现 Milvus 多租户隔离 ✅
   - [x] 3.1 修改向量存储以支持租户 Partition
     - 在 memory/vector_store.py 中为每个租户创建独立 Partition（tenant_{tenant_id}）
     - 修改 ingest_runbook 方法，写入时指定租户 Partition
@@ -98,7 +98,7 @@
     - 测试跨租户检索隔离
     - 测试 Milvus 服务不可用时的降级处理
 
-- [ ] 4. 实现 RAGAS 评估框架 ✅
+- [x] 4. 实现 RAGAS 评估框架 ✅
   - [x] 4.1 创建 RAG 评估测试集和评估脚本
     - 在 evaluation/ragas_eval.py 中实现 RAGAS 评估
     - 创建 100 条 OnCall Q&A 测试集（evaluation/ragas_testset.json）
@@ -111,7 +111,7 @@
     - 测试评估指标计算
     - 测试报告生成
 
-- [ ] 5. 实现四层上下文 Compaction ✅（描述已补充）
+- [x] 5. 实现四层上下文 Compaction ✅（描述已补充）
   - [x] 5.1 实现上下文组装和 Compaction 逻辑
     - 🆕 **补充**：实现 `agents/context.py` 中的 `ContextAssembler` 类（design.md L308-334 定义了接口）
     - 在 memory/compaction.py 中实现四层上下文组装（Workspace + Summary + Recent + RAG）
@@ -137,7 +137,7 @@
     - 测试 LLM 生成 summary 失败的降级处理
     - 测试 Redis 写入失败的错误处理
 
-- [ ] 6. 实现 Token 消耗 A/B 测试 ✅
+- [x] 6. 实现 Token 消耗 A/B 测试 ✅
   - [x] 6.1 创建 Token 基准测试框架
     - 在 evaluation/token_benchmark.py 中实现 A/B 测试
     - 创建 20 个模拟事故对话场景（evaluation/mock_incidents.py）

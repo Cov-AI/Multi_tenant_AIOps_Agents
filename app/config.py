@@ -18,11 +18,35 @@ class Settings(BaseSettings):
     )
 
     # 应用配置
-    app_name: str = "SuperBizAgent"
-    app_version: str = "1.0.0"
+    app_name: str = "OnCall Agent Platform"
+    app_version: str = "2.0.0"
     debug: bool = False
     host: str = "0.0.0.0"
     port: int = 9900
+
+    # --- P0 新增配置 ---
+
+    # 数据库配置（Task 1.5）
+    database_url: str = ""  # postgresql://user:pass@localhost:5432/oncall
+
+    # Redis 配置（Task 5 Compaction 需要）
+    redis_url: str = "redis://localhost:6379"
+
+    # JWT 认证配置（Task 2.1）
+    jwt_secret: str = "dev-secret-change-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60 * 24  # 24 小时
+
+    # OpenRouter / LLM 配置（Task 2.5 — 替代 DashScope）
+    openrouter_api_key: str = ""
+    default_model: str = "anthropic/claude-sonnet-4-20250514"
+    embedding_model: str = "text-embedding-3-small"
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    # Embedding 可以直接走 OpenAI（OpenRouter 也支持）
+    openai_api_key: str = ""  # 用于 embedding，如果留空则使用 openrouter_api_key
+
+    # 多租户模式（Task 24 — 可降级为单租户）
+    multi_tenant_mode: bool = True
 
     # DashScope 配置
     dashscope_api_key: str = ""  # 默认空字符串，实际使用需从环境变量加载

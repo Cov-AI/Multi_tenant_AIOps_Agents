@@ -129,7 +129,11 @@ class TestModelInstantiation:
         )
         assert t.name == "Test Corp"
         assert t.plan == "Pro"
-        assert t.quota_requests_per_minute == 60  # 默认值
+        # SQLAlchemy Column default 仅在 INSERT 时生效，不在构造函数中设置
+        # 验证 Column 元数据中定义了默认值
+        table = Base.metadata.tables["tenants"]
+        col = [c for c in table.columns if c.name == "quota_requests_per_minute"][0]
+        assert col.default.arg == 60
 
     def test_create_user(self):
         """验证创建 User 实例。"""
@@ -148,7 +152,10 @@ class TestModelInstantiation:
             session_id=uuid.uuid4(),
             severity="P0",
         )
-        assert inc.state == "triggered"
+        # SQLAlchemy Column default 仅在 INSERT 时生效
+        table = Base.metadata.tables["incidents"]
+        state_col = [c for c in table.columns if c.name == "state"][0]
+        assert state_col.default.arg == "triggered"
         assert inc.resolved_at is None
 
     def test_create_approval_default_status(self):
@@ -159,7 +166,10 @@ class TestModelInstantiation:
             action="restart service",
             requested_by=uuid.uuid4(),
         )
-        assert appr.status == "pending"
+        # SQLAlchemy Column default 仅在 INSERT 时生效
+        table = Base.metadata.tables["approvals"]
+        status_col = [c for c in table.columns if c.name == "status"][0]
+        assert status_col.default.arg == "pending"
 
 
 # ---------------------------------------------------------------------------

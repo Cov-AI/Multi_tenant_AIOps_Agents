@@ -1,0 +1,31 @@
+name: database_failover
+description: 数据库主从切换工作流
+steps:
+  - name: check_db_status
+    type: mcp_call
+    tool: pg_status_query
+    params:
+      database: "{{db_name}}"
+      
+  - name: analyze_health
+    type: llm_call
+    prompt: |
+      请根据以下数据库健康检查结果，判断是否需要执行强制主从切换。
+      检查结果：{{steps.check_db_status.output}}
+      
+  - name: get_approval_for_failover
+    type: approval
+    message: "数据库 {{db_name}} 出现严重故障，建议立刻切换主节点。分析原因：{{steps.analyze_health.output}}"
+    
+  - name: execute_pg_failover
+    type: mcp_call
+    tool: pg_failover
+    params:
+      action: promote_replica
+      target: "{{replica_node}}"
+      
+  - name: verify_status
+    type: mcp_call
+    tool: pg_status_query
+    params:
+      database: "{{db_name}}"

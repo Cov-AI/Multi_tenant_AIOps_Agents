@@ -9,6 +9,13 @@ from loguru import logger
 
 from app.models.aiops import AIOpsRequest
 from app.services.aiops_service import aiops_service
+from app.agent.aiops_v2.service import aiops_service_v2
+from app.workflow.approval import ApprovalManager
+
+from pydantic import BaseModel
+class ApprovalRequest(BaseModel):
+    decision: str  # "approve" or "reject"
+    tenant_id: str = "default_tenant"
 
 router = APIRouter()
 
@@ -151,3 +158,34 @@ async def diagnose_stream(request: AIOpsRequest):
             }
 
     return EventSourceResponse(event_generator())
+
+
+@router.post("/aiops/approval/{resume_token}")
+async def resolve_approval(resume_token: str, request: ApprovalRequest):
+    """
+    处理高危操作的审批流。
+    接收 approve 或 reject 并唤醒 StateGraph。
+    """
+    logger.info(f"收到审批请求: Token={resume_token}, 决定={request.decision}")
+    
+    # 1. 验证和更新 Token 记录
+    approval_result = await ApprovalManager.resolve_approval(
+        token=resume_token,
+        tenant_id=request.tenant_id,
+        decision=request.decision
+    )
+    
+    if not approval_result:
+        return {"status": "error", "message": "Failed to find or process token."}
+        
+    # 如果通过审批，则唤醒图
+    if request.decision == "approve":
+        incident_id = approval_result["incident_id"]
+        # 目前将它放到后台执行，如有需要可以重构成 SSE
+        import asyncio
+        asyncio.create_task(
+            aiops_service_v2.resume_incident(incident_id=incident_id, tenant_id=request.tenant_id)
+        )
+        return {"status": "success", "message": "Approval accepted. Resuming workflow."}
+    else:
+        return {"status": "success", "message": "Approval rejected. Workflow remains paused/aborted."}

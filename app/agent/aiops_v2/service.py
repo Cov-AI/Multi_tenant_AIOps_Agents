@@ -10,6 +10,7 @@ from loguru import logger
 
 from app.memory.checkpoint import get_checkpointer
 from app.workflow.approval import ApprovalManager
+from app.observability.tracing import TracingManager
 
 from app.agent.aiops_v2.state import IncidentState, SystemState
 from app.agent.aiops_v2.nodes import (
@@ -109,14 +110,10 @@ class AIOpsServiceV2:
             "analysis_evidence": [],
             "action_logs": []
         }
-
-        # Thread_id 用于在 checkpointer 中记忆整个事件生命周期
-        config_dict = {
-            "configurable": {
-                "thread_id": incident_id,
-                "tenant_id": tenant_id
-            }
-        }
+        logger.info(f"[事件 {incident_id}] 新流程启动")
+        
+        # 通过 TracingManager 生成带有 Observability Telemetry Metadata 的请求配置
+        config_dict = TracingManager.get_langgraph_config(tenant_id, incident_id)
 
         try:
             async with get_checkpointer() as checkpointer:
@@ -177,12 +174,7 @@ class AIOpsServiceV2:
 
     async def resume_incident(self, incident_id: str, tenant_id: str) -> None:
         """从断点恢复流转"""
-        config_dict = {
-            "configurable": {
-                "thread_id": incident_id,
-                "tenant_id": tenant_id
-            }
-        }
+        config_dict = TracingManager.get_langgraph_config(tenant_id, incident_id)
         logger.info(f"[事件 {incident_id}] 收到恢复信号，继续执行图流转")
         
         async with get_checkpointer() as checkpointer:
@@ -199,7 +191,7 @@ class AIOpsServiceV2:
                     
     async def get_state(self, incident_id: str, tenant_id: str):
         """测试/外部获取当前图状态的便捷方法"""
-        config_dict = {"configurable": {"thread_id": incident_id, "tenant_id": tenant_id}}
+        config_dict = TracingManager.get_langgraph_config(tenant_id, incident_id)
         async with get_checkpointer() as checkpointer:
             saver = checkpointer if checkpointer is not None else self._fallback_memory_saver
             compiled_graph = self.raw_graph.compile(

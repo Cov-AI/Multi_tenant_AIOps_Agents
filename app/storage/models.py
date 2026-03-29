@@ -319,3 +319,4 @@ class Checkpoint(Base):
         Index("idx_checkpoints_tenant_id", "tenant_id"),
         Index("idx_checkpoints_incident_id", "incident_id"),
     )
+

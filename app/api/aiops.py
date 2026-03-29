@@ -189,3 +189,31 @@ async def resolve_approval(resume_token: str, request: ApprovalRequest):
         return {"status": "success", "message": "Approval accepted. Resuming workflow."}
     else:
         return {"status": "success", "message": "Approval rejected. Workflow remains paused/aborted."}
+
+
+class TriggerRequest(BaseModel):
+    session_id: str = "default_session"
+    tenant_id: str = "default_tenant"
+    incident_content: str = "CPU usage is at 99%"
+
+@router.post("/aiops/trigger")
+async def trigger_incident(request: TriggerRequest):
+    """
+    新建并触发 P1 StateGraph 的全流程处理（Task 13 最小可运行 Demo）
+    """
+    logger.info(f"触发新突发事件: {request.incident_content}")
+    # 因为 P1 还没有完整的 Incident 持久层依赖，我们传入伪造的 incident_id
+    import uuid
+    incident_id = str(uuid.uuid4())
+    
+    # 异步触发流程
+    import asyncio
+    asyncio.create_task(
+        aiops_service_v2.execute_incident(
+            incident_id=incident_id,
+            tenant_id=request.tenant_id,
+            session_id=request.session_id,
+            content=request.incident_content
+        )
+    )
+    return {"status": "success", "incident_id": incident_id, "message": "Incident workflow triggered in background."}
